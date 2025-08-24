@@ -2,14 +2,21 @@
 Trains a neural network on the MNIST dataset and tests it against a custom image.
 """
 
+import os
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 import matplotlib.pyplot as plt
 import numpy as np
 import random
 import tensorflow as tf
 from PIL import Image
 from tensorflow.keras.datasets import mnist
-from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.models import Sequential
+
+tf.get_logger().setLevel('ERROR')
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
@@ -20,7 +27,8 @@ x_train = x_train.reshape(-1, 28*28)
 x_test = x_test.reshape(-1, 28*28)
 
 model = tf.keras.Sequential([
-    tf.keras.layers.Dense(128, activation='relu', input_shape=(784,)),
+    Input(shape=(784,)),
+    tf.keras.layers.Dense(128, activation='relu'),
     tf.keras.layers.Dense(10, activation='softmax')
 ])
 
