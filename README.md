@@ -7,6 +7,7 @@ A machine learning project for handwritten digit classification using the MNIST 
 - Train a neural network on the MNIST dataset
 - Test with custom digit images
 - Visualize dataset samples and structure
+- Save trained models (optional)
 
 ## Files
 

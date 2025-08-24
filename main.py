@@ -6,6 +6,7 @@ import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import random
@@ -75,3 +76,15 @@ predicted_digit = prediction.argmax()
 plt.imshow(img_array, cmap='gray')
 plt.title(f"Predicted: {predicted_digit}")
 plt.show()
+
+save_model = input("\nSave the trained neural network? (y/n): ").lower().strip()
+
+if save_model == 'y' or save_model == 'yes':
+    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    model_filename = f"mnist_model_{timestamp}.keras"
+
+    try:
+        model.save(model_filename)
+        print(f"Model saved successfully as '{model_filename}'")
+    except Exception as e:
+        print(f"Error saving model: {e}")
