@@ -1,5 +1,5 @@
 """
-Trains a neural network on the MNIST dataset and tests it against a custom image.
+Trains a dense neural network on the MNIST dataset.
 """
 
 import os
@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 import tensorflow as tf
-from PIL import Image
+
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.models import Sequential
@@ -54,37 +54,3 @@ actual_class = y_test[test_index]
 plt.imshow(x_test[test_index].reshape(28, 28), cmap='gray')
 plt.title(f"Predicted: {predicted_class} | Actual: {actual_class}")
 plt.show()
-
-img = Image.open('test.png').convert('L')
-img_array = np.array(img)
-
-if img_array.mean() > 127:
-    img_array = 255 - img_array
-
-img_array = img_array / 255.0
-img_flat = img_array.reshape(1, -1)
-prediction = model.predict(img_flat)
-
-top3_indices = prediction[0].argsort()[-3:][::-1]
-print("\nTop 3 predictions for test.png:")
-for i, idx in enumerate(top3_indices):
-    confidence = prediction[0][idx] * 100
-    print(f"{i+1}. Digit {idx}: {confidence:.1f}%")
-    
-predicted_digit = prediction.argmax()
-
-plt.imshow(img_array, cmap='gray')
-plt.title(f"Predicted: {predicted_digit}")
-plt.show()
-
-save_model = input("\nSave the trained neural network? (y/n): ").lower().strip()
-
-if save_model == 'y' or save_model == 'yes':
-    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    model_filename = f"mnist_model_{timestamp}.keras"
-
-    try:
-        model.save(model_filename)
-        print(f"Model saved successfully as '{model_filename}'")
-    except Exception as e:
-        print(f"Error saving model: {e}")
