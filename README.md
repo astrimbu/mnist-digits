@@ -4,28 +4,36 @@ A machine learning project exploring different neural network architectures for 
 
 ## Neural Network Implementations
 
-This project compares two approaches to digit classification:
+This project compares different approaches to digit classification:
 
 ### Dense Neural Network (`dense.py`)
-- Fully-connected layers with flattened input
+- Fully-connected layers with flattened input (using Keras)
 - Architecture: Input(784) → Dense(128) → Dense(10)
 - Accuracy: ~95-98%
-- Good starting point for understanding basic neural networks
+
+### Dense Neural Network from Scratch (`dense_numpy.py`)
+- Fully-connected layers implemented from scratch with NumPy
+- Implements forward propagation, backpropagation, and gradient descent
+- Architecture: Input(784) → Dense(128) → Dense(10)
+- Accuracy: ~95-97%
 
 ### Basic CNN (`cnn.py`)
 - Simple convolutional neural network
 - Preserves spatial structure of images
 - Accuracy: ~99%+
-- Shows the power of CNNs for image tasks
 
 ## Quick Start
 
 ```bash
+# Install dependencies
+pip install -r requirements.txt
+
 # Explore the dataset
 python data.py
 
 # Try each model
-python dense.py
+python dense.py           # Keras implementation
+python dense_numpy.py     # NumPy from scratch
 python cnn.py
 ```
 
