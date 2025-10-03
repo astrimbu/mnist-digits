@@ -34,6 +34,14 @@ x_test = x_test.reshape(-1, 28*28)
 
 ## 2. Core Architecture
 
+### Network Structure
+
+```
+Input (784) → [Dense + ReLU] → Hidden (128) → [Dense + Softmax] → Output (10)
+```
+
+*784 pixels → hidden layer → 10 digit classes (0-9)*
+
 ### Creating the Network
 
 ```python
@@ -51,7 +59,8 @@ class DenseLayer:
     """A fully connected layer with weights, biases, and activation."""
     
     def __init__(self, input_size, output_size, activation='relu'):
-        # Xavier/Glorot initialization for better convergence
+        # Xavier/Glorot initialization: smart starting weights that help the network learn faster
+        # (starts weights at a scale that prevents gradients from vanishing or exploding)
         self.weights = np.random.randn(input_size, output_size) * np.sqrt(2.0 / input_size)
         self.biases = np.zeros((1, output_size))
         self.activation = activation
@@ -62,7 +71,7 @@ class DenseLayer:
         self.output = None
 ```
 
-*Initialize weights with Xavier/Glorot initialization (good for ReLU). Bias starts at 0.*  
+*Initialize weights with Xavier/Glorot initialization (smart starting values optimized for ReLU). Bias starts at 0.*  
 
 ### Full Network Structure
 
@@ -86,7 +95,11 @@ class DenseNeuralNetwork:
 
 ## 3. Forward Pass
 
-### 3.0 Network-Level Forward Pass
+*Now that we've built the network structure, let's see how it makes predictions by passing data forward through each layer.*
+
+---
+
+### 3.1 Network-Level Forward Pass
 
 ```python
 def forward(self, x):
@@ -101,7 +114,7 @@ def forward(self, x):
 
 ---
 
-### 3.1 Layer-Level Linear Transformation
+### 3.2 Layer-Level Linear Transformation
 
 ```python
 def forward(self, x):
@@ -120,7 +133,7 @@ def forward(self, x):
 
 ---
 
-### 3.2 Non-linear Activation (ReLU)
+### 3.3 Non-linear Activation (ReLU)
 
 ```python
 # Inside forward method, after computing self.z
@@ -134,7 +147,7 @@ ReLU introduces non-linearity, enabling stacked layers to approximate complex fu
 
 ---
 
-### 3.3 Output Activation (Softmax)
+### 3.4 Output Activation (Softmax)
 
 ```python
 # Inside forward method
@@ -146,12 +159,14 @@ elif self.activation == 'softmax':
 
 *Convert logits into a probability distribution (values between 0 and 1, sum to 1 per sample).*
 
-- Subtract `max(self.z)` for numerical stability (prevents overflow from large exponentials)
+- Subtract `max(self.z)` to prevent computer from trying to calculate impossibly large numbers (numerical stability)
 - Output is a probability distribution perfect for multi-class classification
 
 ---
 
-### 3.4 Loss Function: Cross-Entropy
+### 3.5 Loss Function: Cross-Entropy
+
+*Now that we have predictions, we need to measure how wrong they are.*
 
 ```python
 # Inside train_step method
@@ -173,6 +188,10 @@ loss = -np.sum(y_one_hot * np.log(predictions + 1e-8)) / batch_size
 ---
 
 ## 4. Backward Pass
+
+*Now that we know what the network predicted (forward pass) and how wrong it was (loss), we work backwards to figure out which weights to adjust.*
+
+---
 
 ### 4.1 Initial Error Signal (Softmax + Cross-Entropy)
 
@@ -238,15 +257,35 @@ def backward(self, grad_output, learning_rate):
 - `grad_input = grad_z @ self.weights.T`: Propagate error signal to previous layer
 
 **Variables:**
-- `self.input.T`: Transpose of input matrix (swap rows & columns)
+- `self.input.T`: Transpose of input matrix (flip rows ↔ columns to align dimensions for matrix multiplication)
 - `grad_z`: Gradient of loss with respect to this layer's pre-activation output
-- `batch_size`: Number of samples, used to average gradients
+- `batch_size`: Number of samples, used to average gradients (so larger batches don't create artificially large updates)
+
+---
+
+### 4.4 Network-Level Backward Pass
+
+```python
+def backward(self, grad_output, learning_rate):
+    """Backward pass through the entire network."""
+    grad = grad_output
+    for layer in reversed(self.layers):
+        grad = layer.backward(grad, learning_rate)
+```
+
+*Propagate gradients backwards through all layers, starting from output layer.*
+
+The gradient flows backward, layer by layer, until we've computed updates for all parameters in the network.
 
 ---
 
 ## 5. Optimizer & Training Loop
 
-### Update Rule (Stochastic Gradient Descent)
+*With gradients computed, we can now update the parameters to improve the network.*
+
+---
+
+### 5.1 Update Rule (Stochastic Gradient Descent)
 
 ```python
 # Inside backward method (already shown above)
@@ -260,7 +299,7 @@ self.biases -= learning_rate * grad_biases
 - `learning_rate`: Step size (typically 0.01 to 0.1)
 - Negative sign: move parameters to reduce loss  
 
-### Training Loop
+### 5.2 Training Loop
 
 ```python
 def train_model(model, x_train, y_train, x_test, y_test, 
@@ -280,12 +319,31 @@ def train_model(model, x_train, y_train, x_test, y_test,
             y_batch = y_train_shuffled[i:i+batch_size]
             
             loss, accuracy = model.train_step(x_batch, y_batch, learning_rate)
+            # ... (continues with tracking and evaluation)
 ```
 
-1. Shuffle training data.  
-2. Split into mini-batches.  
+**The training process:**
+1. Shuffle training data (prevents learning order-dependent patterns)
+2. Split into mini-batches (more stable than single samples)
 3. For each batch:  
-   - Forward pass -> compute loss -> backward pass -> update parameters.  
+   - Forward pass → compute loss → backward pass → update parameters
+
+---
+
+### 5.3 Training History Tracking
+
+```python
+history = {'train_loss': [], 'train_acc': [], 'test_acc': []}
+
+# During training...
+history['train_loss'].append(avg_loss)
+history['train_acc'].append(avg_train_acc)
+history['test_acc'].append(test_accuracy)
+```
+
+*We keep track of metrics over time to monitor learning progress and detect issues like overfitting.*
+
+This history allows us to visualize how the network improves epoch by epoch.
 
 ---
 
@@ -313,15 +371,56 @@ Example: If `output = [[0.1, 0.2, 0.7]]`, then `argmax` returns `2` (the digit w
 
 ---
 
+## 7. Running the Full Pipeline
+
+### The `main()` Function
+
+The `main()` function orchestrates the entire process:
+
+```python
+def main():
+    # 1. Load and preprocess MNIST data
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    x_train = x_train.reshape(-1, 28*28) / 255.0
+    x_test = x_test.reshape(-1, 28*28) / 255.0
+    
+    # 2. Build the network architecture
+    model = DenseNeuralNetwork(
+        layer_sizes=[784, 128, 10],
+        activations=['relu', 'softmax']
+    )
+    
+    # 3. Train for 5 epochs
+    history = train_model(
+        model, x_train, y_train, x_test, y_test,
+        epochs=5, batch_size=128, learning_rate=0.1
+    )
+    
+    # 4. Visualize a random prediction alongside training curves
+    # (Creates plots showing: prediction, loss curve, accuracy curve)
+```
+
+*This demonstrates the complete workflow from raw data to trained model with visualizations.*
+
+### Visualization
+
+The code creates three plots:
+1. **Test Image**: Shows a random digit with predicted vs. actual label
+2. **Training Loss**: Shows how loss decreases over epochs
+3. **Accuracy Curves**: Compares training vs. test accuracy to detect overfitting
+
+---
+
 ## Summary of Flow
 
-1. Preprocess inputs.  
-2. Initialize weights and biases.  
-3. Forward pass: compute `Z`, apply activation, predict with softmax.  
-4. Compute cross-entropy loss.  
-5. Backward pass: compute gradients (`dW`, `db`, `dA`).  
-6. Update parameters with SGD.  
-7. Evaluate on validation data.
+1. Preprocess inputs (normalize, flatten)
+2. Initialize weights and biases (Xavier initialization)
+3. Forward pass: compute `z`, apply activation, predict with softmax
+4. Compute cross-entropy loss
+5. Backward pass: compute gradients (`grad_weights`, `grad_biases`, `grad_input`)
+6. Update parameters with SGD
+7. Track metrics and evaluate on test data
+8. Visualize results
 
 ---
 
@@ -351,4 +450,30 @@ print(f"Test Accuracy: {final_accuracy:.4f}")
 
 # 5. Make predictions
 predictions = model.predict(x_test[:10])
-```  
+```
+
+---
+
+## Quick Reference / Glossary
+
+**Core Concepts:**
+- **Batch**: A small subset of training data processed together (e.g., 128 samples)
+- **Epoch**: One complete pass through the entire training dataset
+- **Forward Pass**: Computing predictions by passing data through the network
+- **Backward Pass**: Computing gradients by working backwards from the error
+
+**Mathematical Terms:**
+- **Gradient**: Directional derivative showing how to adjust a parameter to reduce loss
+- **Learning Rate**: Step size for parameter updates (too large = unstable, too small = slow)
+- **Loss**: A number measuring how wrong the predictions are (lower is better)
+- **Softmax**: Converts raw scores into probabilities that sum to 1
+
+**Matrix Operations:**
+- **Transpose (`.T`)**: Flip rows and columns of a matrix
+- **Dot Product (`@` or `np.dot`)**: Matrix multiplication
+- **Element-wise Multiplication (`*`)**: Multiply corresponding elements
+
+**Layers & Activations:**
+- **Dense Layer**: Fully connected layer where every input connects to every output
+- **ReLU**: Rectified Linear Unit, zeros out negative values: `max(0, x)`
+- **Xavier Initialization**: Smart starting weights that help networks learn faster  
